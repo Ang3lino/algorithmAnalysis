@@ -4,6 +4,7 @@
 #include <vector>
 #include <array> // biblioteca para c++ 11
 #include <iterator> // definicion de ostream_iterator
+#include <algorithm> // funcion generica sort
 
 // bibliotecas necesarias para la programacion concurrente
 #include <thread>
@@ -19,8 +20,7 @@
 #include "bst.h"
 #include "files.hpp"
 
-const size_t NTHREADS = 4;
-const int NELEMS = 0;
+const size_t NTHREADS = 32;
 
 using namespace std;
 
@@ -58,20 +58,14 @@ bool bin_search(const vector<int> &v, const int &x, int left, int right) {
  * Funcion de apoyo que manda a llamar a la misma sobrecargada. La complejidad del
  * algoritmo es O(n lg n).
  */
-inline bool binary_search(const vector<int> &v, const int findable) {
-    int r = v.size() - 1;
-    return bin_search(v, findable, 0, r);
+bool _bin_search(const vector<int> &v, const int findable, 
+        const int_pair lims = make_pair(-1, -1)) {
+    int a = lims.first, b  = lims.second;
+    if (a == -1 && b == -1)
+        a = 0, b = v.size() - 1;
+    return bin_search(v, findable, a, b);
 }
 
-void bin_search() {
-    vector<int> v = read_from_file("10millones.txt", 1e5);
-    for (int x: v)
-        cout << ((binary_search(v, x)) ? "found": "not found") << endl;
-    cout << endl;
-    cout << ((binary_search(v, 12)) ? "found": "not found") << endl;
-    cout << ((binary_search(v, -1)) ? "found": "not found") << endl;
-    cout << endl;
-}
 
 template <typename T>
 std::ostream& operator<< (std::ostream& out, const std::vector<T>& v) {
@@ -124,19 +118,34 @@ vector<vector<int>> partitionate(vector<int> &src, int npartitions) {
     vector<vector<int>> partitioned;
     partitioned.reserve(npartitions);
     for (int i = 0; i < npartitions; ++i) {
-        partitioned[i].emplace_back((src.cbegin() + pairs[i].first, src.cbegin() + pairs[i].second));
+        partitioned[i].emplace_back((src.cbegin() + pairs[i].f(rst, src.cbegin() + pairs[i].second));
     }
     return partitioned;
 }
 */
 
+bool concurrent_binary_search(const vector<int> &v, const int &value) {
+    bool found = false;
+    vector<future<bool>> futures;
+    futures.reserve(NTHREADS);
+    vector<int_pair> pairs = intervals(v.size(), NTHREADS);
+    for (int i = 0; i < NTHREADS; i++) 
+        futures.push_back( async(_bin_search, v, value, pairs[i]) );
+    for (int i = 0; i < NTHREADS; i++) 
+        found = found or futures[i].get();
+    return found;
+}
+
 int main(int argc, char const *argv[]) {
-    vector<int> v = read_from_file("10e3.txt", 10e3);
+    vector<int> v = read_from_file("numeros10millones.txt", 10e6);
     //vector<int> v = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
-    //vector<int> w(v.begin() + 1, v.begin() + 4);
-    //auto matrix = partitionate(v, 4);
-    //for (auto x: matrix) cout << x << endl;
-    cout << concurrent_linear_search(v, 1869198111);
+    //vector<int> v = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
+    //vector<int> v; 
+	//cout << v << endl;
+    vector<int_pair> pairs = intervals(v.size(), NTHREADS);
+    for (auto p: pairs)  // ordenamos por tramos
+        sort(v.begin() + p.first, v.begin() + p.second + 1);
+    cout << concurrent_binary_search(v, 322486) << endl;
     cout << endl;
     return 0;
 }
