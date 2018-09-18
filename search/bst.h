@@ -104,7 +104,7 @@ private:
         if (self == nullptr) return false;
         if (self->data == x) return true;
         if (x < self->data) return contains(self->left, x);
-        else return contains(self->right, x);
+        return contains(self->right, x);
     }
 
 public:
