@@ -5,6 +5,8 @@
 #include <array> // biblioteca para c++ 11
 #include <iterator> // definicion de ostream_iterator
 #include <algorithm> // funcion generica sort
+#include <chrono> // medicion de tiempo
+#include <initializer_list> // argumentos variables de c++
 
 // bibliotecas necesarias para la programacion concurrente
 #include <thread>
@@ -31,7 +33,7 @@ typedef pair<int, int> int_pair;
  * Esta es la forma mas trivial y lenta de buscar elementos en una coleccion, tiene
  * complejidad O(n).
  */
-bool linear_search(const vector<int> &v, const int &x, pair<int, int> p = make_pair(-1, -1)) {
+bool linear_search(const vector<int> &v, const int &x, int_pair p = make_pair(-1, -1)) {
     int a = p.first, b = p.second;
     if (p == make_pair(-1, -1)) // se procedera a buscar sobre todo el vector
         a = 0, b = v.size() - 1;
@@ -46,24 +48,24 @@ bool linear_search(const vector<int> &v, const int &x, pair<int, int> p = make_p
  * Para calcular la mitad del rango es mejor calcular l+(r-l)/2 a comparacion de (l+r)/2
  * ya que l+r puede albergar un entero muy grande.
  */
-bool bin_search(const vector<int> &v, const int &x, int left, int right) {
+bool bin_search_helper(const vector<int> &v, const int &x, int left, int right) {
     if (left > right) return false;
     int i = left + (right - left) / 2;
     if (v[i] == x) return true;
-    if (x < v[i]) return bin_search(v, x, left, --i);
-    return bin_search(v, x, ++i, right);
+    if (x < v[i]) return bin_search_helper(v, x, left, --i);
+    return bin_search_helper(v, x, ++i, right);
 }
 
 /**
  * Funcion de apoyo que manda a llamar a la misma sobrecargada. La complejidad del
  * algoritmo es O(n lg n).
  */
-bool _bin_search(const vector<int> &v, const int findable, 
+bool bin_search(const vector<int> &v, const int findable, 
         const int_pair lims = make_pair(-1, -1)) {
     int a = lims.first, b  = lims.second;
     if (a == -1 && b == -1)
         a = 0, b = v.size() - 1;
-    return bin_search(v, findable, a, b);
+    return bin_search_helper(v, findable, a, b);
 }
 
 
@@ -124,17 +126,28 @@ vector<vector<int>> partitionate(vector<int> &src, int npartitions) {
 }
 */
 
-bool concurrent_binary_search(const vector<int> &v, const int &value) {
+
+bool conc_bin_search_helper(const vector<int> &v, const int &value, 
+                            const vector<int_pair> &pairs) {
     bool found = false;
     vector<future<bool>> futures;
     futures.reserve(NTHREADS);
     vector<int_pair> pairs = intervals(v.size(), NTHREADS);
     for (int i = 0; i < NTHREADS; i++) 
-        futures.push_back( async(_bin_search, v, value, pairs[i]) );
+        futures.push_back( async(bin_search, v, value, pairs[i]) );
     for (int i = 0; i < NTHREADS; i++) 
         found = found or futures[i].get();
     return found;
 }
+
+bool concurrent_binary_search(const vector<int> v, const int &value) {
+    vector<int_pair> pairs = intervals(v.size(), NTHREADS);
+    for (auto p: pairs)  // ordenamos por tramos
+        sort(v.begin() + p.first, v.begin() + p.second + 1);
+    return conc_bin_search_helper(v, value, pairs);
+}
+
+void measure_function()
 
 int main(int argc, char const *argv[]) {
     vector<int> v = read_from_file("numeros10millones.txt", 10e6);
@@ -142,10 +155,20 @@ int main(int argc, char const *argv[]) {
     //vector<int> v = {9, 8, 7, 6, 5, 4, 3, 2, 1, 0};
     //vector<int> v; 
 	//cout << v << endl;
-    vector<int_pair> pairs = intervals(v.size(), NTHREADS);
-    for (auto p: pairs)  // ordenamos por tramos
-        sort(v.begin() + p.first, v.begin() + p.second + 1);
-    cout << concurrent_binary_search(v, 322486) << endl;
+    sort(v.begin(), v.end()); 
+    // medicion del tiempo en ejecucion
+    chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+    cout << bin_search(v, 218639060) << endl;
+    chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::microseconds>( t2 - t1 ).count();
+    cout << duration << endl;
+
+    //t1 = chrono::high_resolution_clock::now();
+    //cout << bin_search(v, 218639060) << endl;
+    //t2 = chrono::high_resolution_clock::now();
+    //duration = chrono::duration_cast<chrono::microseconds>( t2 - t1 ).count();
+    //cout << duration << endl;
+
     cout << endl;
     return 0;
 }
