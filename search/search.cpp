@@ -2,11 +2,14 @@
 #include <fstream> // permite el manejo de archivos
 #include <string>
 #include <vector>
+#include <array> // biblioteca para c++ 11
 #include <iterator> // definicion de ostream_iterator 
 
 // bibliotecas necesarias para la programacion concurrente
 #include <thread>
 #include <mutex>
+#include <atomic>
+#include <memory>
 
 // Funciones mejoradas de C
 #include <cassert> // aserciones de C
@@ -15,10 +18,12 @@
 #include "bst.h"
 #include "files.hpp"
 
-const int THREAD_NUM = 4;
+const size_t NTHREADS = 4;
 const int NELEMS = 0;
 
 using namespace std;
+
+typedef pair<int, int> int_pair;
 
 /**
  * Determina si x pertenece a un vector retornando un booleano.
@@ -87,7 +92,7 @@ std::ostream& operator<< (std::ostream& out, const std::vector<T>& v) {
  * 
  * por supuesto, n > k.
  */
-vector<pair<int, int>> intervals(int n, int k) {
+vector<pair<int, int>> intervals(const int n, const int k) {
     int quotient = n / k, j = 0;
     vector<pair<int, int>> pairs;
     pairs.reserve(k);
@@ -96,6 +101,22 @@ vector<pair<int, int>> intervals(int n, int k) {
     } 
     pairs.push_back(make_pair(j, n - 1));
     return pairs;
+}
+
+inline void conc_lin_search_helper(const vector<int> &v, const int &value, 
+        shared_ptr<bool> &found, const int_pair p) {
+    *found = linear_search(v, value, p);
+}
+
+bool concurrent_linear_search(const vector<int> &v, const int &value) {
+    array<thread, NTHREADS> threads;
+    shared_ptr<bool> found;
+    auto pairs = intervals(v.size(), NTHREADS);
+    for (int i = 0; i < NTHREADS; ++i) {
+        threads[i] = thread(conc_lin_search_helper, v, value, found, pairs[i]);
+        threads[i].join();
+    }
+    return found.get();
 }
 
 /*
