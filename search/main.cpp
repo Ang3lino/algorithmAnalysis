@@ -89,17 +89,20 @@ int main(int argc, char const *argv[]) {
         2000000, 3000000, 4000000, 5000000, 6000000, 7000000, 8000000, 9000000, 10000000 
     };
 
+    cout << "Cargando los valores" << endl;
     // cargamos v de un archivo de datos ordenados
     vector<int> v = read_from_file("sortedNums.txt", 10e6);
+    cout << "Valores cargados" << endl;
     vector<double> avgs(nvec.size(), 0); // inicializamos size() elementos todos ceros
-    bst<int> tree;
+    bst<int> trees[nvec.size()];
     double duration; // variable supuesta a guardar el tiempo en us
     bool found;
-    tree.sorted_to_bst(v);
-    //LagrangePolynomial lagpol;
-    
-    // obtenemos un fuctor de la funcion amiga contains de la instancia de bst
-    auto fun_contains = [&](int value) { return tree.contains(value); };
+
+    for (int i = 0; i < nvec.size(); ++i) {
+        vector<int> w(v.begin(), v.begin() + nvec[i]);
+        trees[i].sorted_to_bst(w);
+    }
+
 
     const int spaces = 10;
     cout << argv[1] << endl;
@@ -139,9 +142,12 @@ int main(int argc, char const *argv[]) {
         cout << "Busqueda por arbol" << endl;
         cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
         cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
+
+        // obtenemos un fuctor de la funcion amiga contains de la instancia de bst
+
         for (int findable: findables) {
             for (int j = 0; j < nvec.size(); ++j) {
-                vector<double> subv(v.begin(), v.begin() + nvec[j]);
+                auto fun_contains = [&](int value) { return trees[j].contains(value); };
                 tie(found, duration) = timeFuncInvocation(fun_contains, findable);
                 avgs[j] += duration;
                 cout << findable << " | " << setw(spaces) << nvec[j] << " | " << setw(spaces) << duration;
@@ -164,6 +170,7 @@ int main(int argc, char const *argv[]) {
                 cout << "------------------------------------------------------\n";
             }
         } 
+
         break;
         default: 
             cout << "Opcion invalida";
