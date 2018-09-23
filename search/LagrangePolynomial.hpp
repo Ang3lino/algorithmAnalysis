@@ -17,10 +17,10 @@ private:
 
     double lag_coef(const int &k, const int &x) {
         double prod = 1;
-        double xk = points[k].first;
-        for (int i = 0; i <= degree; ++i) {
+        const double xk = points[k].first;
+        for (int i = 0; i < points.size(); ++i) {
             if (i != k) {
-                double xi = points[i].first;
+                const double xi = points[i].first;
                 prod *= (x - xi) / (xk - xi);
             } 
         }
@@ -40,6 +40,11 @@ public:
         }
     }
 
+    inline void add_point(const double &x, const double &y) {
+        points.emplace_back(x, y);
+        ++degree;
+    }
+
     /** Establece los puntos para trabajar con la instancia.
      *  Si ya se han definido previamente se remplazan. */
     inline void set_points(std::vector<double_pair> pairs) {
@@ -49,7 +54,7 @@ public:
 
     double eval(double x) {
         double sum = 0.0;
-        for (int i = 0; i <= degree; ++i) {
+        for (int i = 0; i < points.size(); ++i) {
             double yi = points[i].second;
             sum += yi * lag_coef(i, x);
         }

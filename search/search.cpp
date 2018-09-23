@@ -22,14 +22,19 @@
 #include <cassert> // aserciones de C
 #include <cstdio>
 
+// bibliotecas personales
 #include "bst.h"
 #include "files.hpp"
+#include "LagrangePolynomial.hpp"
+#include "matplotlibcpp.h"
 
 const size_t NTHREADS = 4;
 
+namespace plt = matplotlibcpp;
 using namespace std;
 
 typedef pair<int, int> int_pair;
+typedef pair<double, double> double_pair;
 
 /**
  * Funcion que sobrecarga el operador de flujo de salida con el fin de que cualquier 
@@ -176,20 +181,20 @@ bool concurrent_binary_search(const vector<int> v, const int &value) {
 auto timeFuncInvocation = [](auto&& func, auto&&... params) {
     bool found; // variable a regresar
     cout << endl;
-    chrono::high_resolution_clock::time_point t1 = chrono::high_resolution_clock::now();
+    chrono::steady_clock::time_point t1 = chrono::steady_clock::now();
 
     // aplicamos la funcion con los parametros dados
     found = std::forward<decltype(func)>(func)(std::forward<decltype(params)>(params)...); 
 
-    chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
+    chrono::steady_clock::time_point t2 = chrono::steady_clock::now();
     double duration = double(chrono::duration_cast<chrono::nanoseconds>( t2 - t1 ).count());
 
-    return make_tuple(found, duration / 1e6); // found, ms,
+    return make_tuple(found, duration / 1e3); // found, time(us)
 };
 
+
+
 // comandazo
-// g++ minimal.cpp -std=c++11 -I C:\Python27\include\ -I C:\Python27\Lib\site-packages\numpy\core\include -lpython27 -L C:\Python27
-// este funciono
 // g++ minimal.cpp -std=c++11 -I C:\Python37\include\ -I C:\Python37\Lib\site-packages\numpy\core\include -L C:\Python37  -lpython37
 // las banderas de compilacion de g++ no conmutan
 
@@ -199,7 +204,7 @@ int main(int argc, char const *argv[]) {
     vector<int> findables = { 
         322486, 14700764, 3128036, 6337399, 61396, 10393545, 2147445644, 1295390003, 
         450057883, 187645041, 1980098116, 152503, 5000, 1493283650, 214826, 1843349527, 
-        1360839354, 2109248666 , 2147470852 
+        1360839354, 2109248666 , 2147470852, 0 
     };
 
     vector<int> nvec = { 
@@ -209,9 +214,11 @@ int main(int argc, char const *argv[]) {
 
     // cargamos v de un archivo de datos ordenados
     vector<int> v = read_from_file("sortedNums.txt", 10e6);
+    vector<double> avgs(nvec.size(), 0); // inicializamos size() elementos todos ceros
     bst<int> tree;
-    double duration; // variable supuesta a guardar el tiempo en segundos
+    double duration; // variable supuesta a guardar el tiempo en us
     bool found;
+    //LagrangePolynomial lagpol;
     
     // obtenemos un fuctor de la funcion amiga contains de la instancia de bst
     auto fun_contains = [&](int value) { return tree.contains(value); };
@@ -219,57 +226,83 @@ int main(int argc, char const *argv[]) {
     tree.sorted_to_bst(v); // construimos un arbol con v ordenado
 
     const int spaces = 10;
+    cout << argv[1] << endl;
 
-    cout << "Busqueda lineal" << endl;
-    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
-    for (int findable: findables) {
-        for (int n: nvec) {
-            tie(found, duration) = timeFuncInvocation(linear_search, v, findable, make_pair(-1, -1));
-            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
-            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
-            cout << "------------------------------------------------------\n";
+    switch(argv[1][0]) {
+        case '0':
+        cout << "Busqueda lineal" << endl;
+        cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+        cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
+        for (int findable: findables) {
+            for (int j = 0; j < nvec.size(); ++j) {
+                tie(found, duration) = timeFuncInvocation(linear_search, v, findable, make_pair(0, nvec[j]));
+                avgs[j] += duration;
+                cout << findable << " | " << setw(spaces) << nvec[j] << " | " << setw(spaces) << duration;
+                cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+                //cout << "------------------------------------------------------\n";
+            }
         }
+
+        break;
+        case '1':
+        cout << "Busqueda binaria" << endl;
+        cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+        cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
+        for (int findable: findables) {
+            for (int j = 0; j < nvec.size(); ++j) {
+                tie(found, duration) = timeFuncInvocation(bin_search, v, findable, make_pair(0, nvec[j]));
+                avgs[j] += duration;
+                cout << findable << " | " << setw(spaces) << nvec[j] << " | " << setw(spaces) << duration;
+                cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+                cout << "------------------------------------------------------\n";
+            }
+        }
+
+        break;
+        case '2':
+        cout << "Busqueda por arbol" << endl;
+        cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+        cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
+        for (int findable: findables) {
+            for (int n: nvec) {
+                tie(found, duration) = timeFuncInvocation(fun_contains, findable);
+                cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
+                cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+                cout << "------------------------------------------------------\n";
+            }
+        }
+
+        case '3':
+        cout << "Busqueda lineal usando " << NTHREADS << " hilos." << endl;
+        cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+        cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
+        for (int findable: findables) {
+            for (int j = 0; j < nvec.size(); ++j) {
+                tie(found, duration) = timeFuncInvocation(concurrent_linear_search, v, findable);
+                avgs[j] += duration;
+                cout << findable << " | " << setw(spaces) << nvec[j] << " | " << setw(spaces) << duration;
+                cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+                cout << "------------------------------------------------------\n";
+            }
+        }
+
+        default: 
+            cout << "Opcion invalida";
+            return -1;
     }
 
-    cout << "Busqueda lineal usando " << NTHREADS << " hilos." << endl;
-    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
-    for (int findable: findables) {
-        for (int n: nvec) {
-            tie(found, duration) = timeFuncInvocation(concurrent_linear_search, v, findable);
-            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
-            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
-            cout << "------------------------------------------------------\n";
-        }
-    }
+    cout << nvec << endl;
+    cout << avgs << endl;
 
-/*
-    cout << "Busqueda binaria" << endl;
-    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
-    for (int findable: findables) {
-        for (int n: nvec) {
-            tie(found, duration) = timeFuncInvocation(bin_search, v, findable, make_pair(-1, -1));
-            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
-            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
-            cout << "------------------------------------------------------\n";
-        }
-    }
+    // divide cada componente del vector entre su longitud
+    transform(avgs.begin(), avgs.end(), avgs.begin(), [&](double &x) { return x / avgs.size(); });
+    transform(nvec.begin(), nvec.end(), nvec.begin(), [&](int &x) { return x / 100; });
 
-    cout << "Busqueda por arbol" << endl;
-    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
-    for (int findable: findables) {
-        for (int n: nvec) {
-            tie(found, duration) = timeFuncInvocation(fun_contains, findable);
-            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
-            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
-            cout << "------------------------------------------------------\n";
-        }
-    }
-*/
+    cout << nvec << endl;
+    cout << avgs << endl;
 
+    plt::plot(nvec, avgs);
+    plt::show();
 
     cout << endl;
     return 0;
