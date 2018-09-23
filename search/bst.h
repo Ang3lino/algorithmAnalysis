@@ -7,10 +7,12 @@
 
 using namespace std;
 
+/** Arbol binario de busqueda generico */
 template < typename T >
 class bst {
 
 private:
+    /** Nodo binario interno de la clase */
     struct BinaryNode {
         T data;
         BinaryNode *left, *right, *parent;
@@ -28,6 +30,8 @@ private:
 
     BinaryNode *root;
 
+    /** Agrega un elemento al arbol de forma iterativa, no se inserta el valor en caso de 
+     * estar repetido. */
     BinaryNode *add(BinaryNode *root, T data) {
         if (root == nullptr) { // no se ha insertado nada previamente
             root = new BinaryNode(data);
@@ -51,6 +55,7 @@ private:
         return root;
     }
 
+    /** Imprimimos los valores en inorden */
     void inorder(BinaryNode *self) {
         if (self == nullptr) return;
         inorder(self->left);
@@ -58,6 +63,8 @@ private:
         inorder(self->right);
     }
 
+    /** Obtenemos el valor minimo del arbol, el cual se encuentra en la izquierda del nodo
+     * un paso antes de encontrar un valor nulo. */
     BinaryNode *min(BinaryNode *root) {
         if (root != nullptr)
             while (root->left != nullptr)
@@ -91,6 +98,7 @@ private:
         }
     }
 
+    /** Destruimos el arbol recorriendolo en postorden, es llamada por el destructor */
     void destroy(BinaryNode *&root) {
         if (root != nullptr) {
             destroy(root->left);
@@ -100,11 +108,12 @@ private:
         root = nullptr;
     }
 
+    /** Funcion de busqueda la cual determina en O (n log n) si un valor se encuentra */
     bool contains(const BinaryNode *self, const T x) {
-        if (self == nullptr) return false;
-        if (self->data == x) return true;
+        if (self == nullptr) return false; // hemos llegado al fondo y nunca nos lo encontramos
+        if (self->data == x) return true; // encontrado !
         if (x < self->data) return contains(self->left, x);
-        return contains(self->right, x);
+        return contains(self->right, x); // un valor x > self->data 
     }
 
     /** 
@@ -112,7 +121,7 @@ private:
      */
     BinaryNode *sorted_to_bst(vector<T> &sorted, const int left, const int right) {
         if (left > right) return nullptr;
-        int mid = left + (right - left) / 2;
+        int mid = left + (right - left) / 2; 
         BinaryNode *node = new BinaryNode(sorted[mid]);
         node->left = sorted_to_bst(sorted, left, mid - 1);
         node->right = sorted_to_bst(sorted, mid + 1, right);
