@@ -107,9 +107,25 @@ private:
         return contains(self->right, x);
     }
 
+    /** 
+     * Construimos un arbol dado un vector ordenado de manera eficiente.
+     */
+    BinaryNode *sorted_to_bst(vector<T> &sorted, const int left, const int right) {
+        if (left > right) return nullptr;
+        int mid = left + (right - left) / 2;
+        BinaryNode *node = new BinaryNode(sorted[mid]);
+        node->left = sorted_to_bst(sorted, left, mid - 1);
+        node->right = sorted_to_bst(sorted, mid + 1, right);
+        return node;
+    }
+
 public:
 
-    bool contains(const T toFind) {
+    inline void sorted_to_bst(vector<T> &sorted) {
+        root = sorted_to_bst(sorted, 0, sorted.size() - 1);
+    }
+
+    inline bool contains(const T toFind) {
         return contains(root, toFind);
     }
 
@@ -161,6 +177,7 @@ public:
             }
         }
     }
+
 };
 
 #endif 

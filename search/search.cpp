@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <fstream> // permite el manejo de archivos
 #include <string>
@@ -8,6 +9,7 @@
 #include <chrono> // medicion de tiempo
 #include <typeinfo> // obtencion del tipo de dato de una variable
 #include <initializer_list> // argumentos variables de c++
+#include <iomanip> // funciones para manipular el flujo de entrada salida
 
 // bibliotecas necesarias para la programacion concurrente
 #include <thread>
@@ -83,29 +85,44 @@ bool linear_search(const vector<int> &v, const int &x, int_pair p = make_pair(-1
         if (v[i] == x) return true;
     return false;
 }
-
+/**
+ * Determina si un valor pertenece al vector.
+ * 
+ * Esta funcion es una mejora a la busqueda lineal pues se hace el uso de hilos.
+ */
 bool concurrent_linear_search(const vector<int> &v, const int &value) {
-  vector<future<bool>> futures;
-  futures.reserve(NTHREADS);
-  vector<int_pair> pairs = intervals(v.size(), NTHREADS);
+  vector<future<bool>> futures; // vector de futuros que retornan bool
+  futures.reserve(NTHREADS); // reservamos memoria en el vector como optimizacion
+  vector<int_pair> pairs = intervals(v.size(), NTHREADS); // obtenemos los intervalos a buscar
   for (int i = 0; i < NTHREADS; ++i) {
+    // inicializamos los hilos, tan pronto se llame async se corren en otro plano
     futures.push_back( async(linear_search, v, value, pairs[i]) );
   }
   for (int i = 0; i < NTHREADS; ++i) 
-      if (futures[i].get()) return true;
-  return false;
+      if (futures[i].get()) // obtenemos el valor calculado en otro plano, si no nos esperamos
+        return true;
+  return false; // nunca se encontro si llegamos a este punto
 }
 
 /**
- * Determina si x pertenece a un vector previamente ordenado. Se reinventa la rueda pues
- * ya existe binary_search en la STL de C++.
+ * Determina si x pertenece a un vector previamente ordenado. 
+ * 
+ * Busca a la mitad de la secuencia, si es menor busca en la subsecuencia de la izquierda,
+ * sino busca en la derecha. Si la posicion izquierda es mayor a la derecha no se encontro
+ * el valor.
+ * 
+ * Se reinventa la rueda pues ya existe binary_search en la STL de C++. 
+ * 
+ * Observaciones:
  * Para calcular la mitad del rango es mejor calcular l+(r-l)/2 a comparacion de (l+r)/2
- * ya que l+r puede albergar un entero muy grande.
+ * pues l+r puede albergar un entero muy grande.
+ * 
+ * @params vector<int> v debe estar ordenado y al principio left = 0 y right = n - 1
  */
 bool bin_search_helper(const vector<int> &v, const int &x, int left, int right) {
     if (left > right) return false;
-    int i = left + (right - left) / 2;
-    cout << v[i] << endl;
+    int i = left + (right - left) / 2; 
+    //cout << v[i] << endl;
     if (v[i] == x) return true;
     if (x < v[i]) return bin_search_helper(v, x, left, --i);
     return bin_search_helper(v, x, ++i, right);
@@ -117,10 +134,9 @@ bool bin_search_helper(const vector<int> &v, const int &x, int left, int right) 
  * 
  * Para que el algoritmo funcione v tiene que estar ordenado.
  */
-bool bin_search(const vector<int> &v, const int findable, 
-        const int_pair lims = make_pair(-1, -1)) {
+bool bin_search(const vector<int> &v, const int findable, const int_pair lims = make_pair(-1, -1)) {
     int a = lims.first, b  = lims.second;
-    if (a == -1 && b == -1)
+    if (a == -1 && b == -1) // se usa la funcion sin hilos
         a = 0, b = v.size() - 1;
     return bin_search_helper(v, findable, a, b);
 }
@@ -148,10 +164,14 @@ bool concurrent_binary_search(const vector<int> v, const int &value) {
 
 
 /**
- * Funcion lambda tipo wrapper para poder medir el tiempo en ejecucion de cualquier funcion.
- * Puede que el tiempo en ejecucion incrementa ligeramente por el uso de este wrapper.
- * No puede haber parametros por defecto para la funcion en este wrapper, si se requiere
- * hay que ponerlos explicitamente.
+ * - Funcion lambda tipo wrapper para poder medir el tiempo en ejecucion de cualquier funcion.
+ * - Puede que el tiempo en ejecucion incrementa ligeramente por el uso de este wrapper.
+ * - No puede haber parametros por defecto para la funcion en este wrapper, si se requiere
+ *   hay que ponerlos explicitamente.
+ * 
+ * @params: un functor y sus parametros
+ * @return tuple<bool, size_t>, el primer valor determina si se encontro el valor y el 
+ *  segundo el tiempo que llevo en ejecutarse.
  */
 auto timeFuncInvocation = [](auto&& func, auto&&... params) {
     bool found; // variable a regresar
@@ -162,24 +182,84 @@ auto timeFuncInvocation = [](auto&& func, auto&&... params) {
     found = std::forward<decltype(func)>(func)(std::forward<decltype(params)>(params)...); 
 
     chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::microseconds>( t2 - t1 ).count();
-    cout << "Tiempo de ejecucion en microsegundos: " << duration << endl;
-    return found;
+    size_t duration = chrono::duration_cast<chrono::microseconds>( t2 - t1 ).count();
+
+    return make_tuple(found, duration);
 };
 
 int main(int argc, char const *argv[]) {
+    
+    // inicializamos los valores
+    vector<int> findables = { 
+        322486, 14700764, 3128036, 6337399, 61396, 10393545, 2147445644, 1295390003, 
+        450057883, 187645041, 1980098116, 152503, 5000, 1493283650, 214826, 1843349527, 
+        1360839354, 2109248666 , 2147470852 
+    };
+    vector<int> nvec = { 
+        100, 1000, 5000, 10000, 50000, 100000, 200000, 400000, 600000, 800000, 1000000, 
+        2000000, 3000000, 4000000, 5000000, 6000000, 7000000, 8000000, 9000000, 10000000 
+    };
+
+    // cargamos v de un archivo de datos ordenados
+    vector<int> v = read_from_file("sortedNums.txt", 10e6);
+    bst<int> tree;
+    size_t duration; // variable supuesta a guardar microsegundos, de tipo unsigned int
     bool found;
-    vector<int> v = read_from_file("numeros10millones.txt", 10e6);
-    cout << endl;
+    
+    // obtenemos un fuctor de la funcion amiga contains de la instancia de bst
+    auto fun_contains = [&](int value) { return tree.contains(value); };
 
-    //vector<int> v = read_from_file("10e3sorted.txt", 10e6);
-    //vector<int> v = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    tree.sorted_to_bst(v); // construimos un arbol con v ordenado
 
-    found = timeFuncInvocation(linear_search, v, 2045206161, make_pair(-1, -1)) ;
-    cout << found << endl;
+    const int spaces = 10;
 
-    found = timeFuncInvocation(concurrent_linear_search, v, 2045206161) ;
-    cout << found << endl;
+    cout << "Busqueda lineal" << endl;
+    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    for (int findable: findables) {
+        for (int n: nvec) {
+            tie(found, duration) = timeFuncInvocation(linear_search, v, findable, make_pair(-1, -1));
+            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
+            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+            cout << "------------------------------------------------------\n";
+        }
+    }
+
+    cout << "Busqueda binaria" << endl;
+    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    for (int findable: findables) {
+        for (int n: nvec) {
+            tie(found, duration) = timeFuncInvocation(bin_search, v, findable, make_pair(-1, -1));
+            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
+            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+            cout << "------------------------------------------------------\n";
+        }
+    }
+
+    cout << "Busqueda por arbol" << endl;
+    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    for (int findable: findables) {
+        for (int n: nvec) {
+            tie(found, duration) = timeFuncInvocation(fun_contains, findable);
+            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
+            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+            cout << "------------------------------------------------------\n";
+        }
+    }
+
+    cout << "Busqueda lineal usando " << NTHREADS << " hilos." << endl;
+    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    for (int findable: findables) {
+        for (int n: nvec) {
+            tie(found, duration) = timeFuncInvocation(concurrent_linear_search, v, findable);
+            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
+            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+            cout << "------------------------------------------------------\n";
+        }
+    }
 
     cout << endl;
     return 0;
