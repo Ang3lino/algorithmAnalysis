@@ -187,6 +187,12 @@ auto timeFuncInvocation = [](auto&& func, auto&&... params) {
     return make_tuple(found, duration);
 };
 
+// comandazo
+// g++ minimal.cpp -std=c++11 -I C:\Python27\include\ -I C:\Python27\Lib\site-packages\numpy\core\include -lpython27 -L C:\Python27
+// este funciono
+// g++ minimal.cpp -std=c++11 -I C:\Python37\include\ -I C:\Python37\Lib\site-packages\numpy\core\include -L C:\Python37  -lpython37
+// las banderas de compilacion de g++ no conmutan
+
 int main(int argc, char const *argv[]) {
     
     // inicializamos los valores
