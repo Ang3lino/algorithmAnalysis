@@ -170,7 +170,7 @@ bool concurrent_binary_search(const vector<int> v, const int &value) {
  *   hay que ponerlos explicitamente.
  * 
  * @params: un functor y sus parametros
- * @return tuple<bool, size_t>, el primer valor determina si se encontro el valor y el 
+ * @return tuple<bool, real>, el primer valor determina si se encontro el valor y el 
  *  segundo el tiempo que llevo en ejecutarse.
  */
 auto timeFuncInvocation = [](auto&& func, auto&&... params) {
@@ -182,9 +182,9 @@ auto timeFuncInvocation = [](auto&& func, auto&&... params) {
     found = std::forward<decltype(func)>(func)(std::forward<decltype(params)>(params)...); 
 
     chrono::high_resolution_clock::time_point t2 = chrono::high_resolution_clock::now();
-    size_t duration = chrono::duration_cast<chrono::microseconds>( t2 - t1 ).count();
+    double duration = double(chrono::duration_cast<chrono::nanoseconds>( t2 - t1 ).count());
 
-    return make_tuple(found, duration);
+    return make_tuple(found, duration / 1e6); // found, ms,
 };
 
 // comandazo
@@ -201,6 +201,7 @@ int main(int argc, char const *argv[]) {
         450057883, 187645041, 1980098116, 152503, 5000, 1493283650, 214826, 1843349527, 
         1360839354, 2109248666 , 2147470852 
     };
+
     vector<int> nvec = { 
         100, 1000, 5000, 10000, 50000, 100000, 200000, 400000, 600000, 800000, 1000000, 
         2000000, 3000000, 4000000, 5000000, 6000000, 7000000, 8000000, 9000000, 10000000 
@@ -209,7 +210,7 @@ int main(int argc, char const *argv[]) {
     // cargamos v de un archivo de datos ordenados
     vector<int> v = read_from_file("sortedNums.txt", 10e6);
     bst<int> tree;
-    size_t duration; // variable supuesta a guardar microsegundos, de tipo unsigned int
+    double duration; // variable supuesta a guardar el tiempo en segundos
     bool found;
     
     // obtenemos un fuctor de la funcion amiga contains de la instancia de bst
@@ -221,7 +222,7 @@ int main(int argc, char const *argv[]) {
 
     cout << "Busqueda lineal" << endl;
     cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
     for (int findable: findables) {
         for (int n: nvec) {
             tie(found, duration) = timeFuncInvocation(linear_search, v, findable, make_pair(-1, -1));
@@ -231,9 +232,22 @@ int main(int argc, char const *argv[]) {
         }
     }
 
+    cout << "Busqueda lineal usando " << NTHREADS << " hilos." << endl;
+    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
+    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
+    for (int findable: findables) {
+        for (int n: nvec) {
+            tie(found, duration) = timeFuncInvocation(concurrent_linear_search, v, findable);
+            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
+            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
+            cout << "------------------------------------------------------\n";
+        }
+    }
+
+/*
     cout << "Busqueda binaria" << endl;
     cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
     for (int findable: findables) {
         for (int n: nvec) {
             tie(found, duration) = timeFuncInvocation(bin_search, v, findable, make_pair(-1, -1));
@@ -245,7 +259,7 @@ int main(int argc, char const *argv[]) {
 
     cout << "Busqueda por arbol" << endl;
     cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
+    cout << setw(spaces) <<  "tiempo " << setw(spaces) << "|" << "encontrado" << endl;
     for (int findable: findables) {
         for (int n: nvec) {
             tie(found, duration) = timeFuncInvocation(fun_contains, findable);
@@ -254,18 +268,8 @@ int main(int argc, char const *argv[]) {
             cout << "------------------------------------------------------\n";
         }
     }
+*/
 
-    cout << "Busqueda lineal usando " << NTHREADS << " hilos." << endl;
-    cout << "Numero a buscar" << "|" <<  setw(spaces) << "n" << "|" ;
-    cout << setw(spaces) <<  "tiempo en us" << setw(spaces) << "|" << "encontrado" << endl;
-    for (int findable: findables) {
-        for (int n: nvec) {
-            tie(found, duration) = timeFuncInvocation(concurrent_linear_search, v, findable);
-            cout << findable << " | " << setw(spaces) << n << " | " << setw(spaces) << duration;
-            cout << " | " << setw(spaces) << (found ? "simon" : "nel") << endl;
-            cout << "------------------------------------------------------\n";
-        }
-    }
 
     cout << endl;
     return 0;
