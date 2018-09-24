@@ -18,13 +18,13 @@
 
 // bibliotecas personales
 #include "files.hpp"
-#include "LagrangePolynomial.hpp"
+//#include "LagrangePolynomial.hpp"
 #include "search.hpp"
-#include "matplotlibcpp.h"
+//#include "matplotlibcpp.h"
 #include "bst.h"
 
-namespace plt = matplotlibcpp;
-using namespace std;
+// namespace plt = matplotlibcpp;
+// using namespace std;
 
 typedef pair<int, int> int_pair;
 typedef pair<double, double> double_pair;
@@ -91,7 +91,7 @@ int main(int argc, char const *argv[]) {
 
     cout << "Cargando los valores" << endl;
     // cargamos v de un archivo de datos ordenados
-    vector<int> v = read_from_file("sortedNums.txt", 10e6);
+    vector<int> v = read_from_file("10e3sorted.txt", 10e6);
     cout << "Valores cargados" << endl;
     vector<double> avgs(nvec.size(), 0); // inicializamos size() elementos todos ceros
     bst<int> trees[nvec.size()];
@@ -187,8 +187,8 @@ int main(int argc, char const *argv[]) {
     cout << nvec << endl;
     cout << avgs << endl;
 
-    plt::plot(nvec, avgs);
-    plt::show();
+    // plt::plot(nvec, avgs);
+    // plt::show();
 
     cout << endl;
     return 0;
