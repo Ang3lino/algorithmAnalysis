@@ -72,14 +72,34 @@ bool concurrent_linear_search(const vector<int> &v, const int &value) {
  * pues l+r puede albergar un entero muy grande.
  * 
  * @params vector<int> v debe estar ordenado y al principio left = 0 y right = n - 1
+ * @return int que indica el índice del elemento encontrado o -1 si no se encontró
  */
 bool bin_search_helper(const vector<int> &v, const int &x, int left, int right) {
-    if (left > right) return false;
-    int i = left + (right - left) / 2; 
-    //cout << v[i] << endl;
-    if (v[i] == x) return true;
-    if (x < v[i]) return bin_search_helper(v, x, left, --i);
-    return bin_search_helper(v, x, ++i, right);
+    int indiceBajo = left; /*Cota inferior del rango posible en el que está el número.*/
+    int indiceAlto = right; /*Cota superior del rango posible en el que está el número.*/
+    int indiceActual = indiceBajo + (indiceAlto - indiceBajo) / 2; /*Índice que se está revisando en el arreglo.*/
+    bool resultado = false; /*Resultado del algoritmo.*/
+    int num = x;
+
+    /*Cada ciclo se ejecuta si el número aún no ha sido encontrado en el arreglo
+    o si los índices (cotas) cambian de orden (el número no existe en el arreglo)*/
+    while (arreglo[indiceActual] != num && indiceBajo <= indiceAlto) {
+        if (arreglo[indiceActual] < num) {
+            indiceBajo = indiceActual + 1;
+        } else {
+            indiceAlto = indiceActual - 1;
+        }
+        indiceActual = (indiceBajo + indiceBajo) / 2
+    }
+
+    /*Se verifica si el ciclo se terminó porque indiceActual es el índice del
+    elemento buscado y se establece como resultado*/
+    if (arreglo[indiceActual] == num) {
+        resultado = true;
+    }
+
+    /*Si no, se regresa el valor original: -1 (no encontrado)*/
+    return resultado;
 }
 
 /**
@@ -95,7 +115,7 @@ bool bin_search(const vector<int> &v, const int findable, const int_pair lims ) 
     return bin_search_helper(v, findable, a, b);
 }
 
-/*
+
 bool conc_bin_search_helper(const vector<int> &v, const int &value, 
                             const vector<int_pair> &pairs) {
     bool found = false;
@@ -114,4 +134,4 @@ bool concurrent_binary_search(const vector<int> v, const int &value) {
         sort(v.begin() + p.first, v.begin() + p.second + 1);
     return conc_bin_search_helper(v, value, pairs);
 }
-*/
+
