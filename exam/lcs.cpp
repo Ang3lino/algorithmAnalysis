@@ -38,8 +38,8 @@ int lcs( const char *X, const char *Y, int m, int n )
         } 
     } 
 
-    for (i = 0; i < m; ++i) {
-        for (j = 0; j < n; ++j) {
+    for (i = 0; i <= m; ++i) {
+        for (j = 0; j <= n; ++j) {
             cout << L[i][j] << " ";
         }
         cout << endl;
@@ -57,8 +57,13 @@ int max(int a, int b)
 
 /* Driver program to test above function */
 int main() { 
-    string X = "AGGTAB"; 
-    string Y = "GXTXAYB"; 
+    //string X = "AGGTAB"; 
+    //string Y = "GXTXAYB"; 
+    string X, Y;
+    cout << "x: ";
+    cin >> X;
+    cout << "y: ";
+    cin >> Y;
     int m = X.size(), n = Y.size();
     printf("Length of LCS is %d", lcs( X.c_str(), Y.c_str(), m, n ) ); 
 
