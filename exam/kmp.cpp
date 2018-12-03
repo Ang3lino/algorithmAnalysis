@@ -29,11 +29,11 @@ vector<int> computeTable(string src) {
 bool kmp(string text, string pattern) {
     vector<int> pi = computeTable(pattern);
 
-    for (int k = 0; k < pi.size(); ++k) cout << pattern[k];
+    for (int k = 0; k < pi.size(); ++k) cout << pattern[k] << " ";
     cout << endl; 
-    for (int k = 0; k < pi.size(); ++k) cout << pi[k];
+    for (int k = 0; k < pi.size(); ++k) cout << pi[k] << " ";
     cout << endl;
-    for (int k = 0; k < pi.size(); ++k) cout << k ;
+    for (int k = 0; k < pi.size(); ++k) cout << k << " ";
     cout << endl;
 
     int i = 0, j = 0;
